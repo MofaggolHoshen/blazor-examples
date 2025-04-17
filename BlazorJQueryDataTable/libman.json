@@ -1,0 +1,45 @@
+{
+  "version": "3.0",
+  "defaultProvider": "cdnjs",
+  "libraries": [
+    {
+      "library": "jquery@3.7.1",
+      "destination": "wwwroot/jquery/",
+      "files": [
+        "jquery.min.js"
+      ]
+    },
+    {
+      "library": "jqueryui@1.14.1",
+      "destination": "wwwroot/jqueryui/",
+      "files": [
+        "jquery-ui.min.js",
+        "themes/blitzer/jquery-ui.min.css"
+      ]
+    },
+    {
+      "library": "datatables.net@2.2.2",
+      "destination": "wwwroot/datatables.net/",
+      "files": [
+        "dataTables.min.js",
+        "dataTables.js"
+      ]
+    },
+    {
+      "library": "datatables.net-jqui@2.2.2",
+      "destination": "wwwroot/datatables.net-jqui/",
+      "files": [
+        "dataTables.jqueryui.min.js",
+        "dataTables.jqueryui.min.css"
+      ]
+    },
+    {
+      "library": "datatables.net-scroller@2.4.3",
+      "destination": "wwwroot/datatables.net-scroller/"
+    },
+    {
+      "library": "datatables.net-scroller-jqui@2.4.3",
+      "destination": "wwwroot/datatables.net-scroller-jqui/"
+    }
+  ]
+}
