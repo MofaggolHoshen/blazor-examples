@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @inject IJSRuntime JS
 @inject IDataService DataService
+@implements IAsyncDisposable
 
 <PageTitle>DataTables Example</PageTitle>
 
@@ -44,6 +45,7 @@
 @code {
     private List<Person> people = new();
     private Random random = new();
+    private IJSObjectReference? jsModule;
 
     protected override async Task OnInitializedAsync()
     {
@@ -54,37 +56,16 @@
     {
         if (firstRender)
         {
-            await JS.InvokeVoidAsync("eval", @"
-                window.dataTableHelper = {
-                    initialize: function() {
-                        if ($.fn.DataTable.isDataTable('#peopleTable')) {
-                            $('#peopleTable').DataTable().destroy();
-                        }
-                        $('#peopleTable').DataTable({
-                            pageLength: 5,
-                            order: [[0, 'asc']],
-                            language: {
-                                search: 'Filter records:'
-                            }
-                        });
-                    },
-                    refresh: function() {
-                        if ($.fn.DataTable.isDataTable('#peopleTable')) {
-                            $('#peopleTable').DataTable().destroy();
-                        }
-                        $('#peopleTable').DataTable({
-                            pageLength: 5,
-                            order: [[0, 'asc']]
-                        });
-                    }
-                };
-            ");
+            jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/DataTableExample.razor.js");
         }
     }
 
     private async Task InitializeDataTable()
     {
-        await JS.InvokeVoidAsync("dataTableHelper.initialize");
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("initialize");
+        }
     }
 
     private async Task AddRandomPerson()
@@ -104,8 +85,11 @@
         await DataService.AddPersonAsync(newPerson);
         people = await DataService.GetAllPersonsAsync();
         StateHasChanged();
-        await Task.Delay(100);
-        await JS.InvokeVoidAsync("dataTableHelper.refresh");
+
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("refresh");
+        }
     }
 
     private async Task ClearTable()
@@ -113,7 +97,27 @@
         await DataService.ClearAllPersonsAsync();
         people = await DataService.GetAllPersonsAsync();
         StateHasChanged();
-        await Task.Delay(100);
-        await JS.InvokeVoidAsync("dataTableHelper.refresh");
+      
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("refresh");
+        }
+
+       
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        if (jsModule != null)
+        {
+            try
+            {
+                await jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Ignore - the circuit has already disconnected
+            }
+        }
     }
 }

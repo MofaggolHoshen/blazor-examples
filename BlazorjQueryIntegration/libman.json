@@ -10,7 +10,6 @@
       ]
     },
     {
-      "provider": "cdnjs",
       "library": "jqueryui@1.14.1",
       "destination": "wwwroot/jqueryui/",
       "files": [
@@ -19,11 +18,18 @@
       ]
     },
     {
-      "provider": "cdnjs",
       "library": "datatables.net@2.3.4",
       "destination": "wwwroot/datatables.net/",
       "files": [
         "dataTables.min.js"
+      ]
+    },
+    {
+      "library": "datatables.net-jqui@2.3.4",
+      "destination": "wwwroot/datatables.net-jqui/",
+      "files": [
+        "dataTables.jqueryui.min.js",
+        "dataTables.jqueryui.min.css"
       ]
     }
   ]
