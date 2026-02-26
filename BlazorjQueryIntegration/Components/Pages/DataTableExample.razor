@@ -38,42 +38,146 @@
             }
         </tbody>
     </table>
+
+    <table id="peopleTable1" class="table table-striped" style="width:100%">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Age</th>
+                <th>City</th>
+            </tr>
+        </thead>
+    </table>
+
+    <table id="peopleTable2" class="table table-striped" style="width:100%">
+       
+    </table>
     
-    <p class="mt-3">Total Records: <strong>@people.Count</strong></p>
 </div>
 
 @code {
+    // ============================================
+    // COMPONENT STATE
+    // ============================================
+
+    // Holds the list of Person objects to display in the table
     private List<Person> people = new();
+
+    // Random number generator for creating test data
     private Random random = new();
+
+    // JavaScript module reference for calling jQuery DataTable functions
+    // Nullable because it's only initialized after first render
     private IJSObjectReference? jsModule;
 
+    // Alternative data format (object arrays) for DataTable - currently unused
+    private List<object[]> data = new();
+
+    // Flag to coordinate between C# and JavaScript for DataTable refresh
+    // When true, OnAfterRenderAsync will call refresh() after Blazor finishes rendering
+    private bool isDataTableRefreshed = false;
+
+    // ============================================
+    // BLAZOR LIFECYCLE: INITIALIZATION
+    // ============================================
+
+    /// <summary>
+    /// Called once when component is first initialized, before any rendering
+    /// Perfect place for data loading operations
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
+        // Load initial data from the service
         people = await DataService.GetAllPersonsAsync();
+
+        // Convert people to object array format (alternative approach - currently unused)
+        data = people.Select(i => new object[]
+        {
+            i.Id,
+            i.Name,
+            i.Email,
+            i.Age,
+            i.City
+        }).ToList();
     }
 
+    // ============================================
+    // BLAZOR LIFECYCLE: AFTER RENDER
+    // ============================================
+
+    /// <summary>
+    /// Called after component rendering completes - CRITICAL for jQuery integration
+    /// This is where DOM is guaranteed to be updated and ready for jQuery manipulation
+    /// </summary>
+    /// <param name="firstRender">True on initial render, false on subsequent renders</param>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // FIRST RENDER ONLY: Import the JavaScript module
+        // Must be done after render because JS interop requires the circuit to be connected
         if (firstRender)
         {
+            // Dynamically import the ES6 module containing DataTable functions
             jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/DataTableExample.razor.js");
+        }
+
+        // SUBSEQUENT RENDERS: Check if we need to refresh the DataTable
+        // This pattern prevents race conditions between Blazor and jQuery DOM updates
+        if (jsModule != null && isDataTableRefreshed)
+        {
+            // At this point, Blazor has FINISHED updating the DOM
+            // Now it's safe to let jQuery destroy and re-initialize the DataTable
+            // The refresh() function will:
+            // 1. Check if DataTable exists and destroy it
+            // 2. Re-initialize DataTable with the new DOM structure
+            await jsModule.InvokeVoidAsync("refresh");
+
+            // Reset the flag so we don't refresh on every render
+            isDataTableRefreshed = false;
         }
     }
 
+    // ============================================
+    // USER ACTIONS
+    // ============================================
+
+    /// <summary>
+    /// Manually initialize jQuery DataTable on the table
+    /// Called when "Initialize DataTable" button is clicked
+    /// </summary>
     private async Task InitializeDataTable()
     {
+        // Ensure JS module is loaded before calling it
         if (jsModule != null)
         {
+            // Call the initialize() function in the JS module
+            // This will destroy any existing DataTable and create a new one
             await jsModule.InvokeVoidAsync("initialize");
         }
     }
 
+    /// <summary>
+    /// Adds a random person to the table
+    /// Demonstrates the proper pattern for updating data when jQuery DataTable is active
+    /// </summary>
     private async Task AddRandomPerson()
     {
+        // STEP 1: Destroy DataTable BEFORE Blazor re-renders
+        // Critical to prevent race condition: jQuery must release DOM control
+        // before Blazor tries to update the same DOM elements
+        if (jsModule != null)
+        {
+            // Remove DataTable wrapper/controls and restore original table structure
+            await jsModule.InvokeVoidAsync("destroy");
+        }
+
+        // STEP 2: Generate random test data
         var names = new[] { "Michael", "Sarah", "David", "Emma", "James", "Olivia", "Robert", "Sophia" };
         var lastNames = new[] { "Anderson", "Taylor", "Moore", "Jackson", "White", "Harris", "Martin", "Garcia" };
         var cities = new[] { "Boston", "Seattle", "Miami", "Denver", "Austin", "Portland", "Atlanta", "Nashville" };
-        
+
+        // Create a new person with random values
         var newPerson = new Person
         {
             Name = $"{names[random.Next(names.Length)]} {lastNames[random.Next(lastNames.Length)]}",
@@ -82,41 +186,86 @@
             City = cities[random.Next(cities.Length)]
         };
 
+        // STEP 3: Update data on the server/service
         await DataService.AddPersonAsync(newPerson);
+
+        // STEP 4: Refresh the local list from the service (includes the new person)
         people = await DataService.GetAllPersonsAsync();
+
+        // STEP 5: Set flag BEFORE StateHasChanged
+        // This tells OnAfterRenderAsync that it needs to refresh DataTable
+        isDataTableRefreshed = true;
+
+        // STEP 6: Trigger Blazor re-render
+        // StateHasChanged() schedules a render (non-blocking) and returns immediately
+        // The actual rendering happens asynchronously on the render queue
+        // After render completes, OnAfterRenderAsync(false) will be called
+        // At that point, isDataTableRefreshed is true, so refresh() will be called
         StateHasChanged();
 
-        if (jsModule != null)
-        {
-            await jsModule.InvokeVoidAsync("refresh");
-        }
+        // DO NOT call JS here! The render hasn't completed yet.
+        // Calling JS here would create a race condition.
     }
 
+    /// <summary>
+    /// Clears all data from the table
+    /// Demonstrates proper coordination between Blazor rendering and jQuery DataTable
+    /// </summary>
     private async Task ClearTable()
     {
+        // STEP 1: Clear data from the service
         await DataService.ClearAllPersonsAsync();
-        people = await DataService.GetAllPersonsAsync();
-        StateHasChanged();
-      
-        if (jsModule != null)
-        {
-            await jsModule.InvokeVoidAsync("refresh");
-        }
 
-       
+        // STEP 2: Update local list (will be empty)
+        people = await DataService.GetAllPersonsAsync();
+
+        // STEP 3: Set flag to indicate DataTable needs refresh
+        // This flag is checked in OnAfterRenderAsync
+        isDataTableRefreshed = true;
+
+        // STEP 4: Schedule Blazor re-render
+        // This queues a render operation but DOES NOT WAIT for it to complete
+        // It returns immediately and code execution continues
+        StateHasChanged();
+
+        // ⚠️ RACE CONDITION EXAMPLE (commented out):
+        // Calling refresh() here would cause a race condition because:
+        // - StateHasChanged() only SCHEDULES the render, doesn't wait for it
+        // - refresh() would execute immediately while Blazor is still rendering
+        // - Both Blazor and jQuery would try to manipulate the DOM simultaneously
+        // - Result: "Cannot read properties of null (reading 'removeChild')" error
+        //
+        // if (jsModule != null)
+        //     await jsModule.InvokeVoidAsync("refresh");
+        //
+        // ✓ CORRECT APPROACH:
+        // The refresh() call happens in OnAfterRenderAsync AFTER Blazor completes rendering
+        // This ensures sequential DOM updates: Blazor first, then jQuery
     }
 
+    // ============================================
+    // CLEANUP
+    // ============================================
+
+    /// <summary>
+    /// Cleanup when component is disposed
+    /// Important for preventing memory leaks in Blazor Server (SignalR connections)
+    /// </summary>
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
+        // Clean up the JavaScript module reference
         if (jsModule != null)
         {
             try
             {
+                // Dispose the JS object reference to free resources
                 await jsModule.DisposeAsync();
             }
             catch (JSDisconnectedException)
             {
-                // Ignore - the circuit has already disconnected
+                // In Blazor Server, the SignalR circuit may disconnect before disposal
+                // This is normal during browser refresh or navigation away
+                // Ignore this specific exception to prevent error logging
             }
         }
     }
