@@ -5,440 +5,101 @@
 
 <PageTitle>Race Condition Demo</PageTitle>
 
-<h1>🎓 Blazor + JavaScript Race Condition Demo</h1>
-
 <div class="container mt-4">
-    
-    <!-- ============================================ -->
-    <!-- INTRODUCTION -->
-    <!-- ============================================ -->
-    <div class="alert alert-info">
-        <h4>📚 What You'll Learn</h4>
-        <p>This demo shows how race conditions occur when Blazor and JavaScript try to manipulate the same DOM simultaneously.</p>
-        <ul>
-            <li>❌ <strong>Wrong Pattern</strong>: Calling JS immediately after StateHasChanged() causes conflicts</li>
-            <li>✅ <strong>Correct Pattern</strong>: Using OnAfterRenderAsync ensures sequential operations</li>
-        </ul>
-    </div>
+    <h2>Race Condition Demo: Delete Operation</h2>
+    <p class="text-muted">Click delete buttons rapidly to trigger race condition</p>
 
-    <!-- ============================================ -->
-    <!-- DEMO 1: WRONG APPROACH (RACE CONDITION) -->
-    <!-- ============================================ -->
-    <div class="card mb-4 border-danger">
-        <div class="card-header bg-danger text-white">
-            <h3>❌ Demo 1: Race Condition (Wrong Approach)</h3>
-        </div>
-        <div class="card-body">
-            <p><strong>What happens:</strong> JS is called immediately after StateHasChanged(), causing both to modify DOM simultaneously.</p>
-            
-            <div class="mb-3">
-                <button class="btn btn-danger" @onclick="WrongApproach_UpdateContent" disabled="@isWrongRunning">
-                    @(isWrongRunning ? "Running..." : "Run Wrong Approach")
-                </button>
-                <span class="ms-3 text-muted">Counter: @wrongCounter</span>
-            </div>
-
-            <!-- Content box that will be manipulated -->
-            <div id="wrongBox" class="border p-3 bg-light" style="min-height: 100px;">
-                <h5>Content Box (Wrong Approach)</h5>
-                <p>Render Count: @wrongRenderCount</p>
-                @if (!string.IsNullOrEmpty(wrongBoxContent))
-                {
-                    <div class="alert alert-success">@wrongBoxContent</div>
-                }
-            </div>
-
-            @if (!string.IsNullOrEmpty(wrongError))
-            {
-                <div class="alert alert-danger mt-3">
-                    <strong>Error Occurred:</strong> @wrongError
-                </div>
-            }
-
-            <div class="alert alert-secondary mt-3">
-                <strong>Code Pattern:</strong>
-                <pre><code>// ❌ WRONG: Race condition!
-StateHasChanged();                    // Schedules render
-await JS.InvokeVoidAsync("animate");  // Runs immediately - CONFLICT!
-// Both try to modify DOM at the same time!</code></pre>
-            </div>
+    <!-- Add new item -->
+    <div class="mb-3">
+        <div class="input-group" style="max-width: 400px;">
+            <input type="text" class="form-control" @bind="newName" placeholder="Enter name" />
+            <button class="btn btn-primary" @onclick="AddItem">Add Item</button>
         </div>
     </div>
 
-    <!-- ============================================ -->
-    <!-- DEMO 2: CORRECT APPROACH (NO RACE) -->
-    <!-- ============================================ -->
-    <div class="card mb-4 border-success">
-        <div class="card-header bg-success text-white">
-            <h3>✅ Demo 2: Correct Pattern (No Race Condition)</h3>
-        </div>
-        <div class="card-body">
-            <p><strong>What happens:</strong> JS is called in OnAfterRenderAsync AFTER Blazor finishes rendering.</p>
-            
-            <div class="mb-3">
-                <button class="btn btn-success" @onclick="CorrectApproach_UpdateContent" disabled="@isCorrectRunning">
-                    @(isCorrectRunning ? "Running..." : "Run Correct Approach")
-                </button>
-                <span class="ms-3 text-muted">Counter: @correctCounter</span>
-            </div>
-
-            <!-- Content box that will be manipulated -->
-            <div id="correctBox" class="border p-3 bg-light" style="min-height: 100px;">
-                <h5>Content Box (Correct Approach)</h5>
-                <p>Render Count: @correctRenderCount</p>
-                @if (!string.IsNullOrEmpty(correctBoxContent))
-                {
-                    <div class="alert alert-success">@correctBoxContent</div>
-                }
-            </div>
-
-            @if (!string.IsNullOrEmpty(correctSuccess))
-            {
-                <div class="alert alert-success mt-3">
-                    <strong>Success:</strong> @correctSuccess
-                </div>
-            }
-
-            <div class="alert alert-secondary mt-3">
-                <strong>Code Pattern:</strong>
-                <pre><code>// ✅ CORRECT: Sequential operations
-isJsRefreshNeeded = true;    // Set flag
-StateHasChanged();           // Schedule render
-
-// In OnAfterRenderAsync (called AFTER render):
-if (isJsRefreshNeeded) {
-    await JS.InvokeVoidAsync("animate");  // Safe now!
-    isJsRefreshNeeded = false;
-}</code></pre>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- STEP-BY-STEP REPRODUCTION GUIDE -->
-    <!-- ============================================ -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h3>🔬 How to Reproduce the Race Condition</h3>
-        </div>
-        <div class="card-body">
-            <ol>
-                <li><strong>Click "Run Wrong Approach" button</strong> - This triggers the race condition pattern</li>
-                <li><strong>Watch the browser console (F12)</strong> - You may see errors about DOM manipulation</li>
-                <li><strong>Observe erratic behavior</strong> - Content may flicker, animations may skip, or errors may occur</li>
-                <li><strong>Compare with "Run Correct Approach"</strong> - Smooth, predictable behavior</li>
-            </ol>
-
-            <h5 class="mt-4">🎯 Expected Results:</h5>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Approach</th>
-                        <th>Behavior</th>
-                        <th>Errors</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="table-danger">
-                        <td>❌ Wrong (Race Condition)</td>
-                        <td>Unpredictable, flickers, inconsistent state</td>
-                        <td>May throw DOM manipulation errors</td>
-                    </tr>
-                    <tr class="table-success">
-                        <td>✅ Correct (Sequential)</td>
-                        <td>Smooth, predictable, consistent state</td>
-                        <td>No errors</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- TECHNICAL EXPLANATION -->
-    <!-- ============================================ -->
-    <div class="card mb-4">
-        <div class="card-header bg-dark text-white">
-            <h3>🧠 Technical Deep Dive</h3>
-        </div>
-        <div class="card-body">
-            <h5>Why StateHasChanged() Causes Race Conditions:</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <h6 class="text-danger">❌ Misconception:</h6>
-                    <pre><code>StateHasChanged();  
-// ❌ Render is complete now
-await JS("animate"); // Safe?</code></pre>
-                    <p class="text-danger">Wrong! StateHasChanged() only queues the render.</p>
-                </div>
-                <div class="col-md-6">
-                    <h6 class="text-success">✅ Reality:</h6>
-                    <pre><code>StateHasChanged();  
-// Render is QUEUED, not complete
-await JS("animate"); // CONFLICT!</code></pre>
-                    <p class="text-success">StateHasChanged() returns immediately!</p>
-                </div>
-            </div>
-
-            <h5 class="mt-4">The Solution: OnAfterRenderAsync</h5>
-            <p><code>OnAfterRenderAsync</code> is <strong>guaranteed</strong> to run after the DOM is updated:</p>
-            <pre><code>protected override async Task OnAfterRenderAsync(bool firstRender)
-{
-    // ✅ DOM is stable here - safe to call JavaScript
-    if (needsJsUpdate)
+    @foreach(var item in items)
     {
-        await jsModule.InvokeVoidAsync("updateDOM");
-        needsJsUpdate = false;
-    }
-}</code></pre>
+        var id = $"item-{item.Id}";
+
+        <div id=@id class="d-flex justify-content-between align-items-center mb-2" style="max-width: 400px;">
+            <span>@item.Name</span>
+            <button class="btn btn-danger btn-sm" @onclick="() => DeleteItem(item.Id)">
+                Delete
+            </button>
         </div>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- RESET BUTTON -->
-    <!-- ============================================ -->
-    <div class="text-center mt-4">
-        <button class="btn btn-secondary" @onclick="ResetDemo">Reset Demo</button>
-    </div>
-
+    }
 </div>
 
 @code {
-    // ============================================
-    // COMPONENT STATE
-    // ============================================
-
-    // JavaScript module reference - loaded after first render
     private IJSObjectReference? jsModule;
+    private List<DataItem> items = new();
+    private string newName = "";
+    private int nextId = 1;
 
-    // === WRONG APPROACH STATE ===
-    private int wrongCounter = 0;               // Counter for wrong approach demo
-    private int wrongRenderCount = 0;           // Tracks how many times Blazor rendered
-    private string wrongBoxContent = string.Empty;  // Content to display in the box
-    private string wrongError = string.Empty;   // Error message if race condition occurs
-    private bool isWrongRunning = false;        // Prevents multiple simultaneous clicks
+    protected override void OnInitialized()
+    {
+        // Initialize with 5 items
+        items = new List<DataItem>
+        {
+            new DataItem { Id = 1, Name = "John Doe" },
+            new DataItem { Id = nextId++, Name = "Jane Smith" },
+            new DataItem { Id = nextId++, Name = "Bob Johnson" },
+            new DataItem { Id = nextId++, Name = "Alice Brown" },
+            new DataItem { Id = nextId++, Name = "Charlie Wilson" }
+        };
+    }
 
-    // === CORRECT APPROACH STATE ===
-    private int correctCounter = 0;             // Counter for correct approach demo
-    private int correctRenderCount = 0;         // Tracks how many times Blazor rendered
-    private string correctBoxContent = string.Empty; // Content to display in the box
-    private string correctSuccess = string.Empty;    // Success message
-    private bool isCorrectRunning = false;      // Prevents multiple simultaneous clicks
-    private bool needsJsAnimation = false;      // Flag to coordinate JS calls
-
-    // ============================================
-    // BLAZOR LIFECYCLE
-    // ============================================
-
-    /// <summary>
-    /// Called after each render - critical for coordinating JavaScript calls
-    /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // FIRST RENDER: Import the JavaScript module
-        // Must wait until after render because DOM must exist for JS interop
         if (firstRender)
         {
-            // Import ES6 module with animation functions
             jsModule = await JS.InvokeAsync<IJSObjectReference>(
-                "import", 
-                "./Components/Pages/RaceConditionDemo.razor.js"
-            );
-        }
-
-        // SUBSEQUENT RENDERS: Check if we need to run JavaScript animation
-        // This is the CORRECT pattern - JS runs AFTER Blazor finishes DOM updates
-        if (jsModule != null && needsJsAnimation)
-        {
-            try
-            {
-                // At this point:
-                // ✓ Blazor has finished updating the DOM
-                // ✓ correctBoxContent is rendered in the HTML
-                // ✓ Safe to animate the element with JavaScript
-                await jsModule.InvokeVoidAsync("animateBox", "correctBox");
-                
-                // Show success message
-                correctSuccess = $"✓ Animation completed successfully at {DateTime.Now:HH:mm:ss.fff}";
-            }
-            catch (Exception ex)
-            {
-                // Catch any JS errors (shouldn't happen with correct pattern)
-                correctSuccess = $"❌ Error: {ex.Message}";
-            }
-            finally
-            {
-                // Reset flag to prevent animation on every render
-                needsJsAnimation = false;
-                isCorrectRunning = false;
-                
-                // Trigger one more render to show the success message
-                StateHasChanged();
-            }
+                "import", "./Components/Pages/RaceConditionDemo.razor.js");
         }
     }
 
-    // ============================================
-    // DEMO 1: WRONG APPROACH (CAUSES RACE CONDITION)
-    // ============================================
 
-    /// <summary>
-    /// ❌ WRONG: Demonstrates race condition by calling JS immediately after StateHasChanged()
-    /// This pattern causes both Blazor and JavaScript to manipulate DOM simultaneously
-    /// </summary>
-    private async Task WrongApproach_UpdateContent()
+    private void AddItem()
     {
-        // Prevent multiple simultaneous executions
-        if (isWrongRunning) return;
-        isWrongRunning = true;
-        
-        // Clear previous error
-        wrongError = string.Empty;
+        if (string.IsNullOrWhiteSpace(newName)) return;
 
-        try
-        {
-            // STEP 1: Increment counter
-            wrongCounter++;
-            
-            // STEP 2: Update content that Blazor will render
-            wrongBoxContent = $"Updated at {DateTime.Now:HH:mm:ss.fff} (Attempt #{wrongCounter})";
-            
-            // STEP 3: Increment render count
-            wrongRenderCount++;
+        items.Add(new DataItem { Id = nextId++, Name = newName });
+        newName = "";
+    }
 
-            // ⚠️ CRITICAL MISTAKE: Call StateHasChanged()
-            // This SCHEDULES a render but DOES NOT WAIT for it to complete
-            // Code execution continues immediately!
-            StateHasChanged();
+    // ❌ This causes race condition!
+    private async Task DeleteItem(int id)
+    {
+            // Remove item from list
+            items.RemoveAll(x => x.Id == id);
 
-            // ⚠️ RACE CONDITION: Call JavaScript IMMEDIATELY
-            // Problem: Blazor is still rendering in the background!
-            // Timeline:
-            //   T1: StateHasChanged() queues render task
-            //   T2: Code continues to next line
-            //   T3: JS animation starts → tries to modify #wrongBox
-            //   T4: Blazor render task executes → tries to update #wrongBox content
-            //   T5: CONFLICT! Both trying to manipulate same DOM element
+            // ❌ RACE CONDITION: StateHasChanged then immediately refresh DataTable
+            StateHasChanged();  // Queues render, doesn't wait!
+
+            // DataTable refresh runs while Blazor updates DOM → CONFLICT!
             if (jsModule != null)
             {
-                // This await completes BEFORE Blazor's render completes
-                // JavaScript will try to animate while Blazor is updating content
-                // Result: Flickers, inconsistent state, or DOM errors
-                await jsModule.InvokeVoidAsync("animateBox", "wrongBox");
-                
-                // If no error occurred, it's just luck or timing
-                // The race condition still exists and may fail on slower machines
-                wrongError = "⚠️ No error this time, but race condition exists! Try multiple times.";
+                await jsModule.InvokeVoidAsync("deteleteElement", $"item-{id}");
             }
-        }
-        catch (Exception ex)
-        {
-            // Catch race condition errors
-            wrongError = $"❌ Race condition error: {ex.Message}";
-        }
-        finally
-        {
-            isWrongRunning = false;
-            
-            // Need to call StateHasChanged to show error message
-            // This itself proves the problem - we need another render cycle!
-            StateHasChanged();
-        }
+
+        // ❌ RACE CONDITION: Still queues another render after JS call, which may cause another conflict if user clicks rapidly
+        //StateHasChanged();  // Queues render, doesn't wait!
+
     }
 
-    // ============================================
-    // DEMO 2: CORRECT APPROACH (NO RACE CONDITION)
-    // ============================================
-
-    /// <summary>
-    /// ✅ CORRECT: Demonstrates proper coordination using OnAfterRenderAsync
-    /// JavaScript is called AFTER Blazor completes DOM updates
-    /// </summary>
-    private async Task CorrectApproach_UpdateContent()
-    {
-        // Prevent multiple simultaneous executions
-        if (isCorrectRunning) return;
-        isCorrectRunning = true;
-        
-        // Clear previous messages
-        correctSuccess = string.Empty;
-
-        // STEP 1: Increment counter
-        correctCounter++;
-        
-        // STEP 2: Update content that Blazor will render
-        correctBoxContent = $"Updated at {DateTime.Now:HH:mm:ss.fff} (Attempt #{correctCounter})";
-        
-        // STEP 3: Increment render count
-        correctRenderCount++;
-
-        // STEP 4: Set flag BEFORE StateHasChanged
-        // This signals OnAfterRenderAsync to call JavaScript after render
-        needsJsAnimation = true;
-
-        // STEP 5: Schedule render
-        // StateHasChanged() queues the render and returns immediately
-        // We do NOT await anything here
-        StateHasChanged();
-
-        // ✓ CORRECT: We do NOT call JavaScript here!
-        // Instead, OnAfterRenderAsync will handle it after the render completes
-        // This ensures:
-        //   T1: StateHasChanged() queues render
-        //   T2: Render executes and updates DOM
-        //   T3: OnAfterRenderAsync() is called
-        //   T4: JavaScript animation runs (DOM is stable now)
-        //   T5: No conflict!
-    }
-
-    // ============================================
-    // UTILITY METHODS
-    // ============================================
-
-    /// <summary>
-    /// Resets all demo state for a fresh start
-    /// </summary>
-    private void ResetDemo()
-    {
-        // Reset wrong approach state
-        wrongCounter = 0;
-        wrongRenderCount = 0;
-        wrongBoxContent = string.Empty;
-        wrongError = string.Empty;
-        isWrongRunning = false;
-
-        // Reset correct approach state
-        correctCounter = 0;
-        correctRenderCount = 0;
-        correctBoxContent = string.Empty;
-        correctSuccess = string.Empty;
-        isCorrectRunning = false;
-        needsJsAnimation = false;
-
-        // Trigger re-render to show reset state
-        StateHasChanged();
-    }
-
-    // ============================================
-    // CLEANUP
-    // ============================================
-
-    /// <summary>
-    /// Cleanup JavaScript module when component is disposed
-    /// </summary>
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
         if (jsModule != null)
         {
-            try
-            {
-                // Dispose JS module to prevent memory leaks
-                await jsModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // Normal during browser navigation or refresh in Blazor Server
-            }
+            try { await jsModule.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
         }
     }
+
+    private class DataItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+    }
 }
+

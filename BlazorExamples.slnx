@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path="RC.md" />
     <File Path="README.md" />
   </Folder>
   <Project Path="BlazorjQueryIntegration/BlazorjQueryIntegration.csproj" Id="f9b1d6cc-225d-4c4c-875d-01b6cddcd5dc" />
